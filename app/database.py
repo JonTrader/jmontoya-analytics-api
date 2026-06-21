@@ -1,12 +1,20 @@
 from collections.abc import AsyncGenerator
 
 from sqlalchemy.ext.asyncio import (
+    AsyncAttrs,
     AsyncSession,
     async_sessionmaker,
     create_async_engine,
 )
+from sqlalchemy.orm import DeclarativeBase
 
 from app.config import settings
+
+
+# Declarative base class for all SQLAlchemy models.
+class Base(AsyncAttrs, DeclarativeBase):
+    pass
+
 
 # Async engine for the application.
 # `echo=settings.debug` logs every SQL statement when debug mode is enabled.
@@ -41,7 +49,7 @@ async def init_db() -> None:
     Used during application startup. The model import is deferred to avoid
     circular imports while the app is still being wired together.
     """
-    from app import models
+    from app import models  # noqa: F401
 
     async with engine.begin() as conn:
-        await conn.run_sync(models.Base.metadata.create_all)
+        await conn.run_sync(Base.metadata.create_all)
