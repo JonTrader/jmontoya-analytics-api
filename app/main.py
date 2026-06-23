@@ -4,14 +4,13 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import settings
-from app.database import engine, init_db
+from app.database import engine
 from app.routers import dashboard, events, health
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """Application lifespan: create tables on startup, clean up on shutdown."""
-    await init_db()
+    """Application lifespan: clean up database connections on shutdown."""
     yield
     await engine.dispose()
 
