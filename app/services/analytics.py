@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 from sqlalchemy import desc, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -51,8 +51,9 @@ async def get_dashboard_stats(db: AsyncSession) -> DashboardStats:
     # Events by type
     events_by_type: dict[str, int] = {}
     type_result = await db.execute(
-        select(AnalyticsEvent.event_type, func.count(AnalyticsEvent.id).label("count"))
-        .group_by(AnalyticsEvent.event_type)
+        select(AnalyticsEvent.event_type, func.count(AnalyticsEvent.id).label("count")).group_by(
+            AnalyticsEvent.event_type
+        )
     )
     for event_type, count in type_result.all():
         events_by_type[event_type] = count
@@ -82,8 +83,7 @@ async def get_dashboard_stats(db: AsyncSession) -> DashboardStats:
         .limit(5)
     )
     top_projects = [
-        TopProject(context=context, count=count)
-        for context, count in top_projects_result.all()
+        TopProject(context=context, count=count) for context, count in top_projects_result.all()
     ]
 
     # Device breakdown
@@ -105,8 +105,7 @@ async def get_dashboard_stats(db: AsyncSession) -> DashboardStats:
         .limit(5)
     )
     top_pages = [
-        TopPage(pathname=pathname, count=count)
-        for pathname, count in top_pages_result.all()
+        TopPage(pathname=pathname, count=count) for pathname, count in top_pages_result.all()
     ]
 
     # Traffic sources (referrers)
@@ -118,12 +117,11 @@ async def get_dashboard_stats(db: AsyncSession) -> DashboardStats:
         .limit(5)
     )
     traffic_sources = [
-        TrafficSource(referrer=referrer, count=count)
-        for referrer, count in referrer_result.all()
+        TrafficSource(referrer=referrer, count=count) for referrer, count in referrer_result.all()
     ]
 
     # Events over the last 30 days
-    cutoff = datetime.now(timezone.utc) - timedelta(days=30)
+    cutoff = datetime.now(UTC) - timedelta(days=30)
     over_time_result = await db.execute(
         select(
             func.date(AnalyticsEvent.created_at).label("date"),
@@ -134,8 +132,7 @@ async def get_dashboard_stats(db: AsyncSession) -> DashboardStats:
         .order_by(func.date(AnalyticsEvent.created_at))
     )
     events_over_time = [
-        EventsOverTime(date=date_value, count=count)
-        for date_value, count in over_time_result.all()
+        EventsOverTime(date=date_value, count=count) for date_value, count in over_time_result.all()
     ]
 
     # Average hover duration

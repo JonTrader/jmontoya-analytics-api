@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from datetime import date, datetime
-from typing import Optional
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field
@@ -12,14 +11,14 @@ class EventCreate(BaseModel):
 
     event_type: str
     label: str
-    context: Optional[str] = None
-    href: Optional[str] = None
+    context: str | None = None
+    href: str | None = None
     pathname: str
     device_type: str
-    duration_ms: Optional[int] = None
+    duration_ms: int | None = None
     session_id: str
-    referrer: Optional[str] = None
-    metadata: Optional[dict] = None
+    referrer: str | None = None
+    metadata: dict | None = None
 
 
 class EventRead(BaseModel):
@@ -35,25 +34,25 @@ class EventRead(BaseModel):
     id: UUID
     event_type: str
     label: str
-    context: Optional[str]
-    href: Optional[str]
+    context: str | None
+    href: str | None
     pathname: str
     device_type: str
-    duration_ms: Optional[int]
+    duration_ms: int | None
     session_id: str
-    referrer: Optional[str]
-    metadata: Optional[dict] = Field(
+    referrer: str | None
+    metadata: dict | None = Field(
         alias="event_metadata",
         serialization_alias="metadata",
     )
-    browser: Optional[str]
-    os: Optional[str]
+    browser: str | None
+    os: str | None
     created_at: datetime
 
 
 class TopLink(BaseModel):
     label: str
-    href: Optional[str]
+    href: str | None
     count: int
 
 
@@ -73,7 +72,7 @@ class TopPage(BaseModel):
 
 
 class TrafficSource(BaseModel):
-    referrer: Optional[str]
+    referrer: str | None
     count: int
 
 
@@ -94,4 +93,4 @@ class DashboardStats(BaseModel):
     top_pages: list[TopPage]
     traffic_sources: list[TrafficSource]
     events_over_time: list[EventsOverTime]
-    average_hover_duration: Optional[float]
+    average_hover_duration: float | None
