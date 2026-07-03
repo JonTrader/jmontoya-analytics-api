@@ -2,7 +2,9 @@ from uuid import UUID
 
 from httpx import AsyncClient
 
-VALID_KEY = "dev-key-change-in-production"
+from app.config import settings
+
+VALID_KEY = settings.analytics_api_key
 
 
 def _valid_event_payload() -> dict:

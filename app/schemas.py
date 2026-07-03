@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import date, datetime
+from datetime import datetime
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field
@@ -50,34 +50,70 @@ class EventRead(BaseModel):
     created_at: datetime
 
 
+# ------------------------------------------------------------------------------------------------
+# Dashboard response models.
+#
+# Field names are snake_case and must match the Next.js frontend's `DashboardStats` type
+# character-for-character (lib/analytics-dashboard.ts). Pydantic v2 emits raw field names
+# by default (no alias generator), so no camelCase config is applied here.
+# ------------------------------------------------------------------------------------------------
+
+
 class TopLink(BaseModel):
     label: str
-    href: str | None
-    count: int
+    href: str
+    external: bool
+    clicks: int
+    hovers: int
+    avg_hover_duration_ms: float
+    total_hover_duration_ms: float
 
 
 class TopProject(BaseModel):
-    context: str
-    count: int
-
-
-class DeviceBreakdown(BaseModel):
-    device_type: str
-    count: int
+    slug: str
+    title: str
+    views: int
+    clicks: int
 
 
 class TopPage(BaseModel):
     pathname: str
-    count: int
+    views: int
+    entries: int
+    exits: int
 
 
 class TrafficSource(BaseModel):
     referrer: str | None
-    count: int
+    sessions: int
+    landing_pathname: str
 
 
 class EventsOverTime(BaseModel):
-    date: date
+    date: str
+    page_view: int
+    click: int
+    hover: int
+
+
+class DeviceBreakdown(BaseModel):
+    device: str
+    count: int
+
+
+class BrowserBreakdown(BaseModel):
+    browser: str
+    count: int
+
+
+class OsBreakdown(BaseModel):
+    os: str
+    count: int
+
+
+class BrowserDevice(BaseModel):
+    browser: str
+    device: str
     count: int
 
 
@@ -86,11 +122,19 @@ class DashboardStats(BaseModel):
 
     total_events: int
     unique_sessions: int
-    events_by_type: dict[str, int]
-    top_links: list[TopLink]
-    top_projects: list[TopProject]
-    device_breakdown: list[DeviceBreakdown]
-    top_pages: list[TopPage]
-    traffic_sources: list[TrafficSource]
-    events_over_time: list[EventsOverTime]
     average_hover_duration: float | None
+    avg_pages_per_session: float | None
+    wow_event_growth_pct: float | None
+    clicks_by_external: dict[str, int]
+    events_by_type: dict[str, int]
+    events_over_time: list[EventsOverTime]
+    device_breakdown: list[DeviceBreakdown]
+    browser_breakdown: list[BrowserBreakdown]
+    os_breakdown: list[OsBreakdown]
+    browser_device_matrix: list[BrowserDevice]
+    top_links: list[TopLink]
+    top_pages: list[TopPage]
+    top_projects: list[TopProject]
+    traffic_sources: list[TrafficSource]
+    top_exit_links: list[TopLink]
+    contact_conversion_rate: float | None

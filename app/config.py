@@ -1,3 +1,4 @@
+from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -11,9 +12,11 @@ class Settings(BaseSettings):
     )
 
     database_url: str = "postgresql+asyncpg://analytics:analytics@localhost:5432/analytics"
-    analytics_api_key: str = "dev-key-change-in-production"
+    analytics_api_key: str = Field(
+        ..., description="Shared secret expected in the X-Analytics-Key header"
+    )
     cors_origins: str = "*"
     debug: bool = False
 
 
-settings = Settings()
+settings = Settings.model_validate({})
