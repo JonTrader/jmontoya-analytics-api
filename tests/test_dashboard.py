@@ -206,8 +206,8 @@ async def test_dashboard_with_events(client: AsyncClient, db_session: AsyncSessi
         "sessions": 1,
         "landing_pathname": "/projects",
     }
-    assert sources[None] == {
-        "referrer": None,
+    assert sources["Direct"] == {
+        "referrer": "Direct",
         "sessions": 1,
         "landing_pathname": "/contact",
     }
@@ -353,3 +353,131 @@ async def test_contact_conversion_rate(client: AsyncClient, db_session: AsyncSes
 
     response = await client.get("/api/analytics/dashboard")
     assert response.json()["contact_conversion_rate"] == 50.0
+
+
+async def test_browser_breakdown_groups_versions_and_filters_bots(
+    client: AsyncClient, db_session: AsyncSession
+) -> None:
+    db_session.add_all(
+        [
+            _event(
+                event_type="page_view",
+                session_id="s1",
+                browser="Chrome 149",
+                os="Windows 10",
+            ),
+            _event(
+                event_type="page_view",
+                session_id="s2",
+                browser="Chrome 150",
+                os="Windows NT",
+            ),
+            _event(
+                event_type="page_view",
+                session_id="s3",
+                browser="Googlebot 2.1",
+                os="Android 6",
+            ),
+        ]
+    )
+    await db_session.commit()
+
+    response = await client.get("/api/analytics/dashboard")
+    data = response.json()
+
+    # Bots are still counted in totals (narrow-scope filter).
+    assert data["total_events"] == 3
+    assert data["unique_sessions"] == 3
+
+    # Browser versions collapse to family; bots are excluded from browser_breakdown only.
+    assert {b["browser"]: b["count"] for b in data["browser_breakdown"]} == {"Chrome": 2}
+    assert all(b["browser"] != "Googlebot" for b in data["browser_breakdown"])
+
+    # OS versions collapse to family (incl. non-numeric Windows majors -> "Windows").
+    assert {b["os"]: b["count"] for b in data["os_breakdown"]} == {
+        "Windows": 2,
+        "Android": 1,
+    }
+
+
+async def test_traffic_sources_relabel_localhost_and_null_as_direct(
+    client: AsyncClient, db_session: AsyncSession
+) -> None:
+    now = datetime.now(UTC)
+    db_session.add_all(
+        [
+            _event(
+                event_type="page_view",
+                pathname="/a",
+                session_id="s1",
+                referrer="http://localhost:3000/contact",
+                created_at=now - timedelta(seconds=60),
+            ),
+            _event(
+                event_type="page_view",
+                pathname="/b",
+                session_id="s2",
+                referrer="http://127.0.0.1:8000/page",
+                created_at=now - timedelta(seconds=50),
+            ),
+            _event(
+                event_type="page_view",
+                pathname="/c",
+                session_id="s3",
+                referrer=None,
+                created_at=now - timedelta(seconds=40),
+            ),
+            _event(
+                event_type="page_view",
+                pathname="/d",
+                session_id="s4",
+                referrer="https://google.com/search",
+                created_at=now - timedelta(seconds=30),
+            ),
+        ]
+    )
+    await db_session.commit()
+
+    response = await client.get("/api/analytics/dashboard")
+    sources = {s["referrer"]: s for s in response.json()["traffic_sources"]}
+
+    assert None not in sources
+    # All three self-referrers (localhost, 127.0.0.1, None) fold into "Direct".
+    assert sources["Direct"] == {
+        "referrer": "Direct",
+        "sessions": 3,
+        "landing_pathname": "/a",
+    }
+    # Non-self referrer is kept as-is.
+    assert sources["https://google.com/search"] == {
+        "referrer": "https://google.com/search",
+        "sessions": 1,
+        "landing_pathname": "/d",
+    }
+
+
+async def test_localhost_evil_dot_com_is_not_direct(
+    client: AsyncClient, db_session: AsyncSession
+) -> None:
+    """Regression: LIKE patterns would match localhost.evil.com as "Direct"."""
+    db_session.add_all(
+        [
+            _event(
+                event_type="page_view",
+                pathname="/",
+                session_id="s1",
+                referrer="http://localhost.evil.com/hijack",
+            ),
+        ]
+    )
+    await db_session.commit()
+
+    response = await client.get("/api/analytics/dashboard")
+    sources = {s["referrer"]: s for s in response.json()["traffic_sources"]}
+
+    assert "Direct" not in sources
+    assert sources["http://localhost.evil.com/hijack"] == {
+        "referrer": "http://localhost.evil.com/hijack",
+        "sessions": 1,
+        "landing_pathname": "/",
+    }
